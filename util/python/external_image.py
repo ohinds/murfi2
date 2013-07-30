@@ -1,9 +1,38 @@
 from collections import namedtuple
 import os
 import struct
+from time import sleep
 
 import nibabel as nb
 import numpy as np
+import string
+
+def mosaic(data):
+    x, y, z = data.shape
+    n = np.ceil(np.sqrt(z))
+    X = np.zeros((n*x, n*y), dtype=data.dtype)
+    for idx in range(z):
+        x_idx = int(np.floor(idx/n)) * x
+        y_idx = int(idx % n) * y
+        # print x_idx, y_idx
+        # print data.shape
+        X[x_idx:x_idx + x, y_idx:y_idx + y] = data[..., idx]
+        #import pylab
+        #pylab.imshow(X, interpolation='nearest')
+    return X
+
+def demosaic(mosaic, x, y, z):
+    data = np.zeros((x, y, z), dtype=mosaic.dtype)
+    x,y,z = data.shape
+    n = np.ceil(np.sqrt(z))
+    dim = np.sqrt(np.prod(mosaic.shape))
+    mosaic = mosaic.reshape(dim, dim)
+    for idx in range(z):
+        x_idx = int(np.floor(idx/n)) * x
+        y_idx = int(idx % n) * y
+        data[..., idx] = mosaic[x_idx:x_idx + x, y_idx:y_idx + y]
+    return data
+
 
 class ExternalImage(object):
 
@@ -47,20 +76,20 @@ class ExternalImage(object):
             self.names.append(key)
             fmts.append(fmt)
         self.formatstr = ''.join(fmts)
-        self.struct = struct.Struct(self.formatstr)
+        self.header_fmt = struct.Struct(self.formatstr)
         self.named_tuple_class = namedtuple(typename, self.names)
         self.hdr = None
         self.img = None
         self.num_bytes = None
 
     def hdr_from_bytes(self, byte_str):
-        alist = list(self.struct.unpack(byte_str))
+        alist = list(self.header_fmt.unpack(byte_str))
         values = []
         for idx, key in enumerate(self.names):
             if key != 'voxelToWorldMatrix':
                 val = alist.pop(0)
                 if isinstance(val, basestring):
-                    values.append(val.rstrip(b'\0'))
+                    values.append(val.split(b'\0', 1)[0])
                 else:
                     values.append(val)
             else:
@@ -74,7 +103,7 @@ class ExternalImage(object):
                 values.extend(val)
             else:
                 values.append(val)
-        return self.struct.pack(*values)
+        return self.header_fmt.pack(*values)
 
     def create_header(self, img, idx, nt, mosaic):
         x ,y, z, t = img.shape
@@ -112,6 +141,12 @@ class ExternalImage(object):
                           mcRotationZRAD=0.0001)
         return infotuple
 
+    def get_header_size(self):
+        return self.header_fmt.size
+
+    def get_image_size(self):
+        return self.num_bytes
+
     def from_image(self, img, idx, nt, mosaic=True):
         hdrinfo = self.create_header(img, idx, nt, mosaic)
         if idx is not None:
@@ -119,7 +154,7 @@ class ExternalImage(object):
         else:
             data = img.get_data()
         if mosaic:
-            data = do_mosaic(data)
+            data = mosaic(data)
         data = data.flatten().tolist()
         num_elem = len(data)
         return self.hdr_to_bytes(hdrinfo), struct.pack('%dH' % num_elem,
@@ -128,12 +163,12 @@ class ExternalImage(object):
     def make_img(self, in_bytes):
         h = self.hdr
         if h.dataType != 'int16_t':
-            raise ValueError('Unsupported data type')
-        num_elem = self.num_bytes/2 #h.numPixelsRead * h.numPixelsPhase * h.numSlices
-        data = struct.unpack('%dH' % num_elem, in_bytes)
+            raise ValueError('Unsupported data type: %s' % h.dataType)
+
+        data = struct.unpack('%dH' % (self.num_bytes / 2), in_bytes)
         if h.isMosaic:
-            data = demosaic(np.array(data), h.numPixelsRead, h.numPixelsPhase,
-                             h.numSlices )
+            data = demosaic(np.array(data), h.numPixelsRead,
+                            h.numPixelsPhase, h.numSlices)
         else:
             data = np.array(data).reshape((h.numPixelsRead, h.numPixelsPhase,
                                            h.numSlices))
@@ -142,64 +177,31 @@ class ExternalImage(object):
         img_hdr = img.get_header()
         img_hdr.set_zooms((h.pixelSpacingReadMM,
                            h.pixelSpacingPhaseMM,
-                           h.pixelSpacingSliceMM))
+                           h.pixelSpacingSliceMM,
+                           ))
+        img_hdr.set_xyzt_units('mm', 'msec')
+        img_hdr.set_dim_info()
         return img
 
-    def mosaic(data):
-        x, y, z = data.shape
-        n = np.ceil(np.sqrt(z))
-        X = np.zeros((n*x, n*y), dtype=data.dtype)
-        for idx in range(z):
-            x_idx = int(np.floor(idx/n)) * x
-            y_idx = int(idx % n) * y
-            # print x_idx, y_idx
-            # print data.shape
-            X[x_idx:x_idx + x, y_idx:y_idx + y] = data[..., idx]
-        #import pylab
-        #pylab.imshow(X, interpolation='nearest')
-        return X
-
-    def demosaic(mosaic, x, y, z):
-        data = np.zeros((x, y, z), dtype=mosaic.dtype)
-        x,y,z = data.shape
-        n = np.ceil(np.sqrt(z))
-        dim = np.sqrt(np.prod(mosaic.shape))
-        mosaic = mosaic.reshape(dim, dim)
-        for idx in range(z):
-            x_idx = int(np.floor(idx/n)) * x
-            y_idx = int(idx % n) * y
-            data[..., idx] = mosaic[x_idx:x_idx + x, y_idx:y_idx + y]
-        return data
-
-    def process_data(self, in_bytes, sock):
+    def process_header(self, in_bytes):
         magic = struct.unpack('4s', in_bytes[:4])[0]
-        if  magic == 'ERTI':
+        if magic == 'ERTI' or magic == 'SIMU':
             # header
             self.hdr = self.hdr_from_bytes(in_bytes)
             h = self.hdr
             print "header received: TR=%d" % self.hdr.currentTR
             if self.hdr.isMosaic:
                 nrows = int(np.ceil(np.sqrt(h.numSlices)))
-                self.num_bytes = 2 * h.numPixelsRead * h.numPixelsPhase * nrows * nrows
+                self.num_bytes = (2 * h.numPixelsRead *
+                                  h.numPixelsPhase * nrows * nrows)
             else:
-                self.num_bytes = 2 * h.numPixelsRead * h.numPixelsPhase * h.numSlices
+                self.num_bytes = (2 * h.numPixelsRead *
+                                  h.numPixelsPhase * h.numSlices)
             print "Requires: %d bytes" % self.num_bytes
             return self.hdr
         else:
-            # data
-            msg = in_bytes
-            while (self.num_bytes is None):
-                sleep(.1)
-            MSGLEN = self.num_bytes
-            if MSGLEN is None:
-                raise ValueError('MSGLEN should not be none')
-            while len(msg) < MSGLEN:
-                chunk = sock.recv(MSGLEN-len(msg))
-                if chunk == '':
-                    raise RuntimeError("socket connection broken")
-                msg = msg + chunk
-            print "data received: TR=%d bytes=%d" % (self.hdr.currentTR,
-                                                     len(msg))
-            self.img = self.make_img(msg)
-            self.num_bytes = None
-            return self.img
+            raise ValueError("Unknown magic number %s" % magic)
+
+    def process_image(self, in_bytes):
+        self.img = self.make_img(in_bytes)
+        return self.img

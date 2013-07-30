@@ -1,3 +1,6 @@
+##### THIS FILE IS NON FUNCTIONAL. AT SOME POINT IN THE FUTURE IT WILL
+##### DO SOMETHING. HAVE A GREAT DAY.
+
 def serve_files(filenames, tr):
     ic = InfoClient('localhost', 15000, 'localhost', 15001)
     for idx, filename in enumerate(filenames):
@@ -22,6 +25,7 @@ def serve_files(filenames, tr):
     ic.send('<rt:done>')
 
 def main(argv):
+    print "I DO NOTHING"
     pass
 
 if __name__ == "__main__":

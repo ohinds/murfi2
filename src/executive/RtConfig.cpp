@@ -29,6 +29,8 @@
 #include<sstream>
 #include<cstdlib>
 
+typedef pair<string, string> StringPair;
+
 const RtConfigVal RtConfig::unset;
 
 //*** constructors/destructors  ***//
@@ -269,6 +271,55 @@ TiXmlNode *RtConfig::getNode(const string &name, TiXmlNode *node) {
   return NULL;
 }
 
+// get the module name attribute and option attribute for all
+// subnodes of a specified node.
+// in
+//  name is a ':' delimited str spcifying a path into the XML configuration
+//        for example preprocessor:module:name
+//  option_name is a string representing the option name attribute required.
+// out
+//  a list of the matching subnode option names.
+vector<string> RtConfig::getSubNodeNames(const string &name,
+                                         const string &option_name) {
+  vector<string> matches;
+
+  TiXmlNode* node = getNode(name);
+  if (node == NULL) {
+    return matches;
+  }
+
+  TiXmlNode *child = NULL;
+  while((child = node->ToElement()->IterateChildren(child))) {
+    TiXmlElement *el = child->ToElement();
+    if (el == NULL) {
+      continue;
+    }
+
+    TiXmlNode *subchild = NULL;
+    while((subchild = el->IterateChildren("option", subchild))) {
+      TiXmlElement *subel = subchild->ToElement();
+      if (subel == NULL) {
+        continue;
+      }
+
+      string subname;
+      subel->QueryValueAttribute("name",&subname);
+      cout << "subname: " << subname << endl;
+
+      if (subname != option_name) {
+        continue;
+      }
+
+      cout << subname << ": " << subchild->ValueStr() << endl;
+
+      matches.push_back(subchild->ValueStr());
+      break;
+    }
+  }
+
+  return matches;
+}
+
 // determine if there is a value set for a particular config variable
 //  in
 //   the variable name to check
@@ -277,7 +328,6 @@ TiXmlNode *RtConfig::getNode(const string &name, TiXmlNode *node) {
 bool RtConfig::isSet(const string &name) {
   return get(name,&parms).isSet();
 }
-
 
 // sets a parm value starting from a specified xml node
 // children are created appropritately

@@ -31,10 +31,12 @@ RtMaskLoad::RtMaskLoad() : RtStreamComponent(),
                            mosaic(false),
                            unmosaic(true),
                            dynamic(false),
+                           isWeights(false),
                            save(true),
-                           maskLoad(NULL) {
+                           maskLoad(NULL),
+                           weightMask(NULL) {
   componentID = moduleString;
-                           }
+}
 
 // destructor
 RtMaskLoad::~RtMaskLoad() {
@@ -70,6 +72,9 @@ bool RtMaskLoad::processOption(const string &name, const string &text,
   }
   if(name == "dynamic") {
     return RtConfigVal::convert<bool>(dynamic, text);
+  }
+  if(name == "isWeights") {
+    return RtConfigVal::convert<bool>(isWeights, text);
   }
   if(name == "save") {
     return RtConfigVal::convert<bool>(save, text);
@@ -158,33 +163,72 @@ int RtMaskLoad::process(ACE_Message_Block *mb) {
     }
   }
 
-  // try to load the file
-  if(!maskLoad->load()) {
-    cerr << "error loading mask file " << maskLoad->getFilename() << endl;
+  if (isWeights) {
+    weightMask = new RtActivation(*img);
+    weightMask->getDataID().setFromInputData(*maskLoad,*this);
+    weightMask->getDataID().setDataName(NAME_WEIGHT_MASK);
+    weightMask->setFilename(maskLoad->getFilename());
 
-    if(logOutput) {
-      stringstream logs("");
-      logs << "error loading mask file from " << maskLoad->getFilename()
-           << endl;
-      log(logs);
+    // try to load the file
+    if(!weightMask->load()) {
+      cerr << "error loading weight mask file "
+           << weightMask->getFilename() << endl;
+
+      if(logOutput) {
+        stringstream logs("");
+        logs << "error loading weight mask file from "
+             << weightMask->getFilename()
+             << endl;
+        log(logs);
+      }
+
+      return 0;
     }
 
-    return 0;
+    cout << weightMask->getDataID() << endl;
+
+    getDataStore().setData(weightMask);
+
+    maskLoad->setFromNonZeroPixels(*weightMask);
+  }
+  else {
+    // try to load the file
+    if(!maskLoad->load()) {
+      cerr << "error loading mask file " << maskLoad->getFilename() << endl;
+
+      if(logOutput) {
+        stringstream logs("");
+        logs << "error loading mask file from " << maskLoad->getFilename()
+             << endl;
+        log(logs);
+      }
+
+      return 0;
+    }
   }
 
   // mosaic if we need to
   if(mosaic) {
     maskLoad->mosaic();
+    if (isWeights) {
+      weightMask->mosaic();
+    }
   }
 
   // unmosaic if we need to
   if(unmosaic) {
     maskLoad->unmosaic();
+    if (isWeights) {
+      weightMask->unmosaic();
+    }
   }
 
   // flip if we need to
   if(flipLR) {
     maskLoad->flipLR();
+    if (isWeights) {
+      weightMask->flipLR();
+    }
   }
 
   setResult(msg,maskLoad);

@@ -30,6 +30,7 @@ enum RtRoiCombineMethod {
   RT_ROI_VARIANCE,
   RT_ROI_MEDIAN,
   RT_ROI_WEIGHTEDAVE,
+  RT_ROI_WEIGHTEDRAW,
   RT_ROI_SUM,
   RT_ROI_MAX,
   RT_ROI_MIN
@@ -93,7 +94,7 @@ class RtRoiCombine : public RtStreamComponent {
   // if its a weighted average we have to retreive the weights
   string weightsModuleID;
   string weightsDataName;
-
+  string weightsRoiID;
 };
 
 #endif

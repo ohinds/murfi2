@@ -244,3 +244,7 @@ void RtActivation::reallocateData() {
 
   data = new double[numPix];
 }
+
+bool RtActivation::read(const string &filename) {
+  return RtDataImage<double>::read(filename);
+}

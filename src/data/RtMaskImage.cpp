@@ -223,6 +223,23 @@ void RtMaskImage::setAll(short val) {
   }
 }
 
+void RtMaskImage::setFromNonZeroPixels(RtActivation &activation) {
+  if (getNumEl() != activation.getNumEl()) {
+    cerr << "ERROR: The number of elements in the mask image "
+      "and activation image are different." << endl;
+    return;
+  }
+
+  for(unsigned int i = 0; i < getNumEl(); i++) {
+    if (abs(activation.getPixel(i)) > EPS) {
+      setPixel(i, 1);
+    }
+    else {
+      setPixel(i, 0);
+    }
+  }
+}
+
 // set the info based on a generic data image info
 void RtMaskImage::setInfo(RtMRIImage &img) {
   ACE_TRACE(("RtDataImage<T>::getAutoContrast"));

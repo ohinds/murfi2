@@ -92,6 +92,9 @@ class RtMaskImage : public RtDataImage<short> {
   //  val: value to set all voxels to
   void setAll(short val);
 
+  // create a binary mask as non-zero voxels in an activation image
+  void setFromNonZeroPixels(RtActivation &activation);
+
   // compute the number of "on" voxels
   void updateOnVoxelIndices();
 

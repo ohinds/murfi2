@@ -104,6 +104,8 @@ class RtActivation : public RtDataImage<double> {
   // reallocate data array based on current number of pixels
   void reallocateData();
 
+  bool read(const string &filename);
+
  protected:
 
   // for display

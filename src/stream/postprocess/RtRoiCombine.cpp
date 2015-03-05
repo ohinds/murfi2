@@ -55,6 +55,9 @@ bool RtRoiCombine::processOption(const string &name, const string &text,
     else if(text == "weighted-ave") {
       method = RT_ROI_WEIGHTEDAVE;
     }
+    else if(text == "weighted-raw") {
+      method = RT_ROI_WEIGHTEDRAW;
+    }
     else if(text == "sum") {
       method = RT_ROI_SUM;
     }
@@ -72,6 +75,9 @@ bool RtRoiCombine::processOption(const string &name, const string &text,
   }
   if(name == "weightsDataName") {
     weightsDataName = text;
+  }
+  if(name == "weightsRoiID") {
+    weightsRoiID = text;
   }
 
   return RtStreamComponent::processOption(name, text, attrMap);
@@ -128,9 +134,9 @@ int RtRoiCombine::process(ACE_Message_Block *mb) {
     return 0;
   }
 
-
   RtActivation *result = NULL;
   RtActivation *weightedAve = NULL;
+  RtDataID weightsID;
   switch(method) {
     case RT_ROI_MEAN:
       result = getMean(dat, mask);
@@ -154,6 +160,32 @@ int RtRoiCombine::process(ACE_Message_Block *mb) {
           logs << "RtRoiCombine::process: could not find the voxel weights for "
                << "weighted average roi combination at tr "
                << dat->getDataID().getTimePoint() << endl;
+          log(logs);
+        }
+
+        return 0;
+      }
+
+      result = getWeightedAve(dat, weightedAve, mask);
+      break;
+    case RT_ROI_WEIGHTEDRAW:
+      weightsID.initializeToWildCards();
+      weightsID.setModuleID(ID_MASKLOAD);
+      weightsID.setDataName(NAME_WEIGHT_MASK);
+      weightsID.setRoiID(weightsRoiID);
+
+      weightedAve = static_cast<RtActivation*>(
+        getDataStore().getData(weightsID));
+
+      if(weightedAve == NULL) {
+        cerr << "RtRoiCombine::process: could not find the voxel weights for "
+             << "weighted raw roi combination (with data id " << weightsID
+             << ")" << endl;
+        if(logOutput) {
+          stringstream logs("");
+          logs << "RtRoiCombine::process: could not find the voxel weights for "
+               << "weighted raw roi combination (with data id " << weightsID
+               << ")" << endl;
           log(logs);
         }
 

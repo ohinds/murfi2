@@ -39,6 +39,7 @@ const string ID_MASK = "mask";
 const string ID_MASKLOAD = "mask-load";
 const string ID_MASKGEN = "mask-gen";
 const string NAME_MASK = "mask-img";
+const string NAME_WEIGHT_MASK = "weight-mask-img";
 
 const string ID_MOSAIC = "mosaic";
 // same names as scanner image

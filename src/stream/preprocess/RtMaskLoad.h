@@ -22,6 +22,9 @@
 
 #include"RtStreamComponent.h"
 
+class RtActivation;
+class RtMaskImage;
+
 // class declaration
 class RtMaskLoad : public RtStreamComponent {
 
@@ -60,10 +63,12 @@ class RtMaskLoad : public RtStreamComponent {
   bool unmosaic;
   bool flipLR;
   bool dynamic;
+  bool isWeights;
   bool save;
 
   // data
   RtMaskImage *maskLoad;
+  RtActivation *weightMask;
 };
 
 #endif

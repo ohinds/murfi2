@@ -238,6 +238,8 @@ void RtMaskImage::setFromNonZeroPixels(RtActivation &activation) {
       setPixel(i, 0);
     }
   }
+
+  updateOnVoxelIndices();
 }
 
 // set the info based on a generic data image info

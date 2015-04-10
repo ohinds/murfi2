@@ -12,6 +12,7 @@ class MainWindow;
 
 class DesignEditor;
 class PlotController;
+class StimulusWidget;
 
 class MainWindow : public QMainWindow, public RtDataListener {
   Q_OBJECT
@@ -36,4 +37,5 @@ class MainWindow : public QMainWindow, public RtDataListener {
   Ui::MainWindow *ui;
   PlotController *plot_controller;
   DesignEditor *design_editor;
+  StimulusWidget *stimulus;
 };

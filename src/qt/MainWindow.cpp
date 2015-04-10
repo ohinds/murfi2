@@ -12,6 +12,7 @@
 
 #include "DesignEditor.h"
 #include "PlotController.h"
+#include "StimulusWidget.h"
 #include "UnivariateRunEditor.h"
 
 using std::cout;
@@ -21,6 +22,7 @@ MainWindow::MainWindow(QWidget *parent)
   : QMainWindow(parent)
   , ui(new Ui::MainWindow)
   , plot_controller()
+  , stimulus(new StimulusWidget())
 {
   ui->setupUi(this);
   plot_controller = new PlotController(ui->designPlotWidget,
@@ -35,6 +37,10 @@ MainWindow::MainWindow(QWidget *parent)
                    plot_controller, SLOT(handleData(const QString &)),
                    Qt::QueuedConnection);
 
+  QObject::connect(this, SIGNAL(dataReady(const QString &)),
+                   stimulus, SLOT(handleData(const QString &)),
+                   Qt::QueuedConnection);
+
   if (!getExperimentConfigFile().empty()) {
     initExperiment();
     RtConfigFmriRun run_config;
@@ -42,6 +48,8 @@ MainWindow::MainWindow(QWidget *parent)
     ui->imageWidget->initRun(run_config);
     executeRun(run_config);
   }
+
+  stimulus->show();
 }
 
 MainWindow::~MainWindow() {

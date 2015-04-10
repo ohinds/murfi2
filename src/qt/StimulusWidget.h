@@ -4,8 +4,10 @@
 
 #include "RtDataID.h"
 
+class QCPItemLine;
 class QCPItemRect;
 class QCustomPlot;
+class QKeyEvent;
 
 class StimulusWidget : public QWidget{
   Q_OBJECT
@@ -26,9 +28,12 @@ class StimulusWidget : public QWidget{
 
   void handleData(QString qid);
 
+  void keyPressEvent(QKeyEvent *);
+
  private:
 
   QCustomPlot *plot;
   QCPItemRect *therm;
+  QCPItemLine *zero;
 
 };

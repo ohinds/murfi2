@@ -11,7 +11,8 @@
 
 StimulusWidget::StimulusWidget(QWidget *parent)
   : plot(new QCustomPlot(this))
-  , therm(new QCPItemRect(plot)) {
+  , therm(new QCPItemRect(plot))
+  , zero(new QCPItemLine(plot)) {
 
   plot->setBackground(Qt::gray);
 
@@ -25,7 +26,16 @@ StimulusWidget::StimulusWidget(QWidget *parent)
   plot->yAxis->setTicks(false);
 
   plot->xAxis->setRange(-1, 1);
-  plot->yAxis->setRange(-10, 10);
+  plot->yAxis->setRange(-4, 4);
+
+  therm->setVisible(false);
+
+  zero->setPen(QPen(Qt::black));
+  zero->start->setCoords(-0.2, 0);
+  zero->end->setCoords(0.2, 0);
+
+  plot->addItem(therm);
+  plot->addItem(zero);
 
   QHBoxLayout *layout = new QHBoxLayout;
   layout->addWidget(plot);
@@ -60,7 +70,20 @@ void StimulusWidget::handleData(QString qid) {
       therm->bottomRight->setCoords(0.1, val);
     }
 
+    therm->setVisible(true);
     plot->replot();
+  }
+
+}
+
+void StimulusWidget::keyPressEvent(QKeyEvent *event) {
+  switch(event->key()) {
+    case Qt::Key_Escape:
+      setWindowState(Qt::WindowNoState);
+      break;
+    case Qt::Key_F:
+      setWindowState(Qt::WindowFullScreen);
+      break;
   }
 
 }

@@ -129,3 +129,8 @@ void MainWindow::editDesign() {
     plot_controller->replotDesign(design);
   }
 }
+
+void MainWindow::close() {
+  stimulus->close();
+  QMainWindow::close();
+}

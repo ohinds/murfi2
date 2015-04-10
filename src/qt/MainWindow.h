@@ -31,6 +31,7 @@ class MainWindow : public QMainWindow, public RtDataListener {
   void newUnivariateRun();
   void openRun();
   void editDesign();
+  void close();
 
  private:
 

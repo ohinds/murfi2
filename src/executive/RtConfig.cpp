@@ -362,8 +362,12 @@ vector<string> RtConfig::getProcessingModuleNames(const string &module_name,
 //   the variable name to check
 //  out
 //   true if the var has been set
-bool RtConfig::isSet(const string &name) {
-  return get(name,&parms).isSet();
+bool RtConfig::isSet(const string &name, TiXmlNode *node) {
+  if (node == NULL) {
+    node = &parms;
+  }
+
+  return get(name,node).isSet();
 }
 
 // sets a parm value starting from a specified xml node

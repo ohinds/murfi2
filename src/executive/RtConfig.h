@@ -118,7 +118,7 @@ class RtConfig {
   //   the variable name to check
   //  out
   //   true if the var has been set
-  bool isSet(const string &name);
+  bool isSet(const string &name, TiXmlNode *node = NULL);
 
   ///// templated sets must be defined in the header :(
 

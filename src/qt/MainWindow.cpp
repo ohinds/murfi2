@@ -46,6 +46,7 @@ MainWindow::MainWindow(QWidget *parent)
     RtConfigFmriRun run_config;
     run_config.parseConfigFile(getExperimentConfigFile());
     ui->imageWidget->initRun(run_config);
+    stimulus->setupFromConfig(run_config);
     executeRun(run_config);
   }
 
@@ -80,6 +81,7 @@ void MainWindow::openRun() {
   }
 
   ui->imageWidget->initRun(run_config);
+  stimulus->setupFromConfig(run_config);
 
   executeRun(run_config);
 }
